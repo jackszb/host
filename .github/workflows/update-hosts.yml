@@ -1,0 +1,41 @@
+name: Update hosts.json
+
+on:
+  schedule:
+    # Runs once a day at 03:00 UTC. Adjust the cron expression as needed.
+    - cron: "0 3 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-hosts
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Build hosts.json
+        run: python scripts/build_hosts.py
+
+      - name: Commit and push if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add hosts.json
+          if git diff --cached --quiet; then
+            echo "hosts.json unchanged, nothing to commit."
+          else
+            git commit -m "chore: update hosts.json ($(date -u +'%Y-%m-%d'))"
+            git push
+          fi
